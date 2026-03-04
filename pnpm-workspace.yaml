@@ -29,3 +29,6 @@ packageExtensions:
         dependencies:
             # Fix missing type dependency
             "@types/picomatch": 4.0.2
+
+
+ignore-workspace-root-check: true
