@@ -24,7 +24,7 @@
     ],
     "default_widget_container_height": 280,
     "default_country_code": "GB",
-    "show_labs_settings": false,
+    "show_labs_settings": true,
     "features": {},
     "default_federate": true,
     "default_theme": "light",
@@ -45,5 +45,6 @@
         "url": "https://call.element.io",
         "brand": "Element Call"
     },
-    "map_style_url": "https://api.maptiler.com/maps/streets/style.json?key=fU3vlMsMn4Jb6dnEIFsx"
+    "map_style_url": "https://api.maptiler.com/maps/streets/style.json?key=fU3vlMsMn4Jb6dnEIFsx",
+    "permalink_prefix": "https://element.weird.gripe"
 }

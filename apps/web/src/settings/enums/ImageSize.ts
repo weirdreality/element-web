@@ -11,7 +11,7 @@ Please see LICENSE files in the repository root for full details.
 const SIZE_LARGE = { w: 800, h: 600 };
 // For Normal the image gets drawn to never exceed SIZE_NORMAL.w, SIZE_NORMAL.h
 // constraint by: timeline width, manual height overrides
-const SIZE_NORMAL = { w: Math.ceil(324 * (16 / 9)), h: 324 }; // for w > h
+const SIZE_NORMAL = { w: 640, h: 360 }; // for w > h
 
 type Dimensions = { w?: number; h?: number };
 
