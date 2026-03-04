@@ -1,0 +1,127 @@
+name: Build and deploy
+on:
+    push:
+        branches: [custombuild]
+    workflow_dispatch:
+concurrency:
+    group: ${{ github.workflow }}-${{ github.head_ref || github.sha }}
+    cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+# develop pushes and repository_dispatch handled in build_develop.yaml
+env:
+    # This must be set for fetchdep.sh to get the right branch
+    PR_NUMBER: ${{ github.event.pull_request.number }}
+    NX_DEFAULT_OUTPUT_STYLE: stream-without-prefixes
+permissions:
+    checks: read
+    deployments: write
+jobs:
+    build:
+        name: "Build on ${{ matrix.image }} and deploy"
+        # We build on all 3 platforms to ensure we don't have any OS-specific build incompatibilities
+        strategy:
+            fail-fast: false
+            matrix:
+                image:
+                    - ubuntu-24.04
+                    #- windows-2022
+                    #- macos-14
+        runs-on: ${{ matrix.image }}
+        defaults:
+            run:
+                shell: bash
+        environment: custombuild
+        env:
+            SITE: ${{ vars.SITE }}
+        steps:
+            - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+            - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
+            - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6
+              with:
+                  # Disable cache on Windows as it is slower than not caching
+                  # https://github.com/actions/setup-node/issues/975
+                  cache: ${{ runner.os != 'Windows' && 'pnpm' || '' }}
+                  node-version: "lts/*"
+
+            - name: Fetch layered build
+              run: ./scripts/layered.sh
+
+            - name: Copy config
+              working-directory: apps/web
+              run: cp element.io/develop/config.json config.json
+
+            - name: Build
+              working-directory: apps/web
+              env:
+                  CI_PACKAGE: true
+              run: VERSION=$(scripts/get-version-from-git.sh) pnpm build
+
+            - name: Upload Artifact
+              uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+              with:
+                  name: webapp-${{ matrix.image }}
+                  path: apps/web/webapp
+                  retention-days: 1
+
+            #- name: Load GPG key
+            #  run: |
+            #      curl https://packages.element.io/element-release-key.gpg | gpg --import
+            #      gpg -k "$GPG_FINGERPRINT"
+            #  env:
+            #      GPG_FINGERPRINT: ${{ vars.GPG_FINGERPRINT }}
+
+            - name: Check current version on deployment
+              id: current_version
+              run: |
+                  version=$(curl -s https://$SITE/version)
+                  echo "version=${version#v}" >> $GITHUB_OUTPUT
+
+            # The current version bundle melding dance is skipped if the version we're deploying is the same
+            # as then we're just doing a re-deploy of the same version with potentially different configs.
+            - name: Download current version for its old bundles
+              id: current_download
+              if: steps.current_version.outputs.version != github.ref_name
+              uses: ./.github/actions/download-verify-element-tarball
+              with:
+                  tag: v${{ steps.current_version.outputs.version }}
+                  out-file-path: _current_version
+
+            - name: Download target version
+              uses: ./.github/actions/download-verify-element-tarball
+              with:
+                  tag: ${{ github.ref_name }}
+                  out-file-path: _deploy
+
+            - name: Merge current bundles into target
+              if: steps.current_download.outcome == 'success'
+              run: cp -vnpr _current_version/bundles/* _deploy/bundles/
+
+            - name: Copy config
+              run: cp apps/web/element.io/app/config.json _deploy/config.json
+
+            - name: Populate 404.html
+              run: echo "404 Not Found" > _deploy/404.html
+
+            - name: Populate _headers
+              run: cp .github/cfp_headers _deploy/_headers
+
+            #- name: Wait for other steps to succeed
+            #  uses: t3chguy/wait-on-check-action@18541021811b56544d90e0f073401c2b99e249d6 # fork
+            #  if: inputs.skip-checks != true
+            #  with:
+            #      ref: ${{ github.sha }}
+            #      running-workflow-name: "Deploy to Cloudflare Pages"
+            #      repo-token: ${{ secrets.GITHUB_TOKEN }}
+            #      wait-interval: 10
+            #      check-regexp: ^((?!SonarCloud|SonarQube|issue|board|label|Release|prepare|GitHub Pages).)*$
+
+            - name: Deploy to Cloudflare Pages
+              uses: cloudflare/pages-action@f0a1cd58cd66095dee69bfa18fa5efd1dde93bca # v1
+              with:
+                  apiToken: ${{ secrets.CF_PAGES_TOKEN }}
+                  accountId: ${{ secrets.CF_PAGES_ACCOUNT_ID }}
+                  projectName: element-custombuild
+                  directory: _deploy
+                  gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+                  branch: main
+
