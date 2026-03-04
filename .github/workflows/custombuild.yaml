@@ -32,6 +32,7 @@ jobs:
         environment: custombuild
         env:
             SITE: ${{ vars.SITE }}
+            ASSETS_SITE: staging.element.io
         steps:
             - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -70,31 +71,31 @@ jobs:
             #  env:
             #      GPG_FINGERPRINT: ${{ vars.GPG_FINGERPRINT }}
 
-            - name: Check current version on deployment
-              id: current_version
-              run: |
-                  version=$(curl -s https://$SITE/version)
-                  echo "version=${version#v}" >> $GITHUB_OUTPUT
+            #- name: Check current version on deployment
+            #  id: current_version
+            #  run: |
+            #      version=$(curl -s https://$ASSETS_SITE/version)
+            #      echo "version=${version#v}" >> $GITHUB_OUTPUT
 
-            # The current version bundle melding dance is skipped if the version we're deploying is the same
-            # as then we're just doing a re-deploy of the same version with potentially different configs.
-            - name: Download current version for its old bundles
-              id: current_download
-              if: steps.current_version.outputs.version != github.ref_name
-              uses: ./.github/actions/download-verify-element-tarball
-              with:
-                  tag: v${{ steps.current_version.outputs.version }}
-                  out-file-path: _current_version
+            ## The current version bundle melding dance is skipped if the version we're deploying is the same
+            ## as then we're just doing a re-deploy of the same version with potentially different configs.
+            #- name: Download current version for its old bundles
+            #  id: current_download
+            #  if: steps.current_version.outputs.version != github.ref_name
+            #  uses: ./.github/actions/download-verify-element-tarball
+            #  with:
+            #      tag: v${{ steps.current_version.outputs.version }}
+            #      out-file-path: _current_version
 
-            - name: Download target version
-              uses: ./.github/actions/download-verify-element-tarball
-              with:
-                  tag: ${{ github.ref_name }}
-                  out-file-path: _deploy
+            #- name: Download target version
+            #  uses: ./.github/actions/download-verify-element-tarball
+            #  with:
+            #      tag: ${{ github.ref_name }}
+            #      out-file-path: _deploy
 
-            - name: Merge current bundles into target
-              if: steps.current_download.outcome == 'success'
-              run: cp -vnpr _current_version/bundles/* _deploy/bundles/
+            #- name: Merge current bundles into target
+            #  if: steps.current_download.outcome == 'success'
+            #  run: cp -vnpr _current_version/bundles/* _deploy/bundles/
 
             - name: Copy config
               run: cp apps/web/element.io/app/config.json _deploy/config.json
