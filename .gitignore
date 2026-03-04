@@ -4,7 +4,7 @@
 /key.pem
 /lib
 node_modules
-/.npmrc
+#/.npmrc
 /*.log
 package-lock.json
 .DS_Store
