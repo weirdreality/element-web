@@ -64,6 +64,12 @@ jobs:
                   path: apps/web/webapp
                   retention-days: 1
 
+            - name: Extract webapp
+              run: |
+                  mkdir _deploy
+                  cp -a apps/web/webapp/. _deploy/
+            #     tar xf apps/web/dist/develop.tar.gz -C _deploy --strip-components=1
+
             #- name: Load GPG key
             #  run: |
             #      curl https://packages.element.io/element-release-key.gpg | gpg --import
