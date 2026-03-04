@@ -129,5 +129,5 @@ jobs:
                   accountId: ${{ secrets.CF_PAGES_ACCOUNT_ID }}
                   #projectName: element-custombuild
                   #directory: _deploy
-                  command: pages deploy _deploy --project-name=element-custombuild
+                  command: pages deploy _deploy --project-name=element-custombuild --branch=main
 
