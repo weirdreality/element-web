@@ -1,7 +1,7 @@
 name: Build and deploy
 on:
     push:
-        branches: [custombuild]
+        branches: [custombuild-2]
     workflow_dispatch:
 concurrency:
     group: ${{ github.workflow }}-${{ github.head_ref || github.sha }}
